@@ -74,22 +74,62 @@ int process_args(int argc, char *argv[]) {
 		}
 
 	}
-
+	//TODO: highlight your username if mentioned, ex : highlight @kxt5405
 	return -1;
 }
 
 int get_username() {
     //use popen() to read whoami
+	//FILE *popen(const char *command, const char *mode);
+	FILE* fp = popen("whoami", "r"); //create a child process
 
+	if(fp == NULL){ //error check
+		perror("popen failed");
+		return -1;
+	}
+
+	char buffer[256];//last byte includes null terminator
+	//char *fgets(char *str, int n, FILE *stream);
+	//output read bytes to str, max num of bytes to read n, and reads from stream
+	while(fgets(buffer, sizeof(buffer), fp) != NULL){ //also get size of buffer, but since it's char, usually 1 byte
+		printf("%s", buffer);//print bytes of username
+	}
+
+	pclose(fp); //close file process after use
 	return -1;
 }
 
 void handle_signal(int signal) {
-    //sigint
 
-	//sighup
-	//sigterm
-	//
+	struct sigaction act; //from <signal.h>
+	//sigaction syscall changes the action taken by a process on receipt of a
+	//specific signal
+
+	//struct has fields sa_mask = any other sigs to block
+	//*sa_handler = handling function to set
+	//int sa_flags = modifiers
+
+	sigemptyset(&act.sa_mask); //init empty signal set
+	act.sa_flags = 0; //zero flags
+
+	//SIGUSR1 handling
+	act.sa_handler = usr1_handler;
+	if(sigaction(SIGUSR1, &act, NULL) < 0) {
+		perror("sigaction: SIGUSR1"); //out to err
+		exit(1);
+	}
+
+	//update sa_handler after each signal handling use (switching modes)
+	act.sa_handler = exit_handler; //exit_handler func 'mode' for both SIG INT/TERM
+
+	if(sigaction(SIGINT, &act, NULL) < 0) {
+		perror("sigaction: SIGINT");
+		exit(1);
+	}
+	if (sigaction(SIGTERM, &act, NULL) < 0) {
+		perror("sigaction: SIGTERM");
+		exit(1);
+	}
 
 	return;
 }
@@ -106,12 +146,16 @@ void* receive_messages_thread(void* arg) {
             // for system types, print the message in gray with username SYSTEM
             // for disconnect types, print the reason in red with username DISCONNECT and exit
             // for anything else, print an error
-	//while(){
-		//1
-		//2
-		//2abcd
-	//}
+	int i = 0;
+	while(arg[i] != NULL){
+		//read from server
 
+		//check message type
+		if(get_msg or smth(arg[i])){
+
+		}
+	}
+	i++;
 }
 
 void help_message(){
