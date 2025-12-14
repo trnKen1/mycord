@@ -12,8 +12,28 @@
 #include <ctype.h>
 #include <stdint.h>
 
-// typedef enum MessageType { ... } message_type_t;
-// typedef struct __attribute__((packed)) Message { ... } message_t;
+//!!!MESSAGE TYPES THAT EACH INTEGER REFERS TO
+typedef enum MessageType { //these are just ints at the end of the day
+	LOGIN = 0,
+	LOGOUT = 1,
+	MESSAGE_SEND = 2,
+	MESSAGE_RECV = 10,
+	DISCONNECT = 12,
+	SYSTEM = 13
+} message_type_t;
+
+//It is highly recommended to use a packed struct and implement the memory
+//layout as defined above and send/receive messages in struct-sized chunks as
+//opposed to sending each field individually.
+typedef struct __attribute__((packed)) Message {
+	//message_type will ideally take from message_type_t
+	unsigned int message_type; //unsigned int, first 4 bytes, the int represents many msg types, defined in enums
+	unsigned int timestamp; //u int UNIX timestamp, next 4 bytes
+	char* user_str[32]; //next 32 bytes, null terminated string, ex: @kxt5405 with '\0'
+	char* message_str[1024]; //next 1024 bytes is a null term msg
+} message_t;
+
+
 typedef struct Settings {
     struct sockaddr_in server; //struct contains sin: AF_INET family,int port,IPv4 addr,zero[8](padding)
     bool quiet;
@@ -25,7 +45,22 @@ typedef struct Settings {
 static char* COLOR_RED = "\033[31m"; //use for highlighting a username mention
 static char* COLOR_GRAY = "\033[90m";
 static char* COLOR_RESET = "\033[0m";
-static settings_t settings = {0};
+static settings_t settings = {0}; //defaulted settings
+
+void help_message(){
+	printf("age: ./client [-h] [--port PORT] [--ip IP] [--domain DOMAIN] [--quiet]");
+	printf("mycord client");
+	printf("\n	 options:");
+	printf("--help                show this help message and exit");
+	printf("--port PORT           port to connect to (default: 8080)");
+	printf("--ip IP               IP to connect to (default: \"127.0.0.1\")");
+	printf("--domain DOMAIN       Domain name to connect to (if domain is specified, IP must not be)");
+	printf("--quiet               do not perform alerts or mention highlighting");
+	printf("\n	examples:");
+	printf("./client --help (prints the above message)");
+	printf("./client --port 1738 (connects to a mycord server at 127.0.0.1:1738)" );
+	printf("./client --domain example.com (connects to a mycord server at example.com:8080)");
+}
 
 int process_args(int argc, char *argv[]) {
 
@@ -160,20 +195,6 @@ void* receive_messages_thread(void* arg) {
 	//i++;
 }
 
-void help_message(){
-	printf("age: ./client [-h] [--port PORT] [--ip IP] [--domain DOMAIN] [--quiet]");
-	printf("mycord client");
-	printf("\n	 options:");
-	printf("--help                show this help message and exit");
-	printf("--port PORT           port to connect to (default: 8080)");
-	printf("--ip IP               IP to connect to (default: \"127.0.0.1\")");
-	printf("--domain DOMAIN       Domain name to connect to (if domain is specified, IP must not be)");
-	printf("--quiet               do not perform alerts or mention highlighting");
-	printf("\n	examples:");
-	printf("./client --help (prints the above message)");
-	printf("./client --port 1738 (connects to a mycord server at 127.0.0.1:1738)" );
-	printf("./client --domain example.com (connects to a mycord server at example.com:8080)");
-}
 
 int main(int argc, char *argv[]) {
     // setup sigactions (ill-advised to use signal for this project, use sigaction with default (0) flags instead)
