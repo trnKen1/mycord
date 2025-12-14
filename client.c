@@ -29,7 +29,7 @@ typedef struct __attribute__((packed)) Message {
 	//message_type will ideally take from message_type_t
 	unsigned int message_type; //unsigned int, first 4 bytes, the int represents many msg types, defined in enums
 	unsigned int timestamp; //u int UNIX timestamp, next 4 bytes
-	char* user_str[32]; //next 32 bytes, null terminated string, ex: @kxt5405 with '\0'
+	char* username[32]; //next 32 bytes, null terminated string, ex: @kxt5405 with '\0'
 	char* message_str[1024]; //next 1024 bytes is a null term msg
 } message_t;
 
@@ -176,40 +176,58 @@ ssize_t perform_full_read(void *buf, size_t n) {
 }
 
 void* receive_messages_thread(void* arg) {
-    // while some condition(s) are true
+	message_t message;
+
+	// while some condition(s) are true
+	while(settings.running == true){
 		// read message from the server (ensure no short reads)
+		//use perform_full_read(), which uses read() unbuffered, but ensures no cutoffs
+
+		unsigned int message_type = ntohl(message.type); //get message type, formatted
+		unsigned int message_time = ntohl(message.timestamp);
+
 		// check the message type
-            // for message types, print the message and do highlight parsing (if not quiet)
-            // for system types, print the message in gray with username SYSTEM
-            // for disconnect types, print the reason in red with username DISCONNECT and exit
-            // for anything else, print an error
-	//int i = 0;
-	//while(arg[i] != NULL){
-		//read from server
+			// for message types, print the message and do highlight parsing (if not quiet)
+        if(message_type == MESSAGE_RECV){
+			//print message: timestamp, username, content
 
-		//check message type
-	//	if(get_msg or smth(arg[i])){
+			//highlighting feature
+			if(settings.quiet == false){ //if !quiet and the mention @abc1234 shows
 
-	//	}
-	//}
-	//i++;
+
+			}
+			else{ //should only print that one copy, no repeat messages
+				//printf(); //formatted
+			}
+
+
+        }
+			// for system types, print the message in gray with username SYSTEM
+		else if(message_type == SYSTEM){
+
+        }
+			// for disconnect types, print the reason in red with username DISCONNECT and exit
+		else if(message_type == DISCONNECT) {
+
+        }
+			// for anything else, print an error
+	}
+	return NULL;
 }
 
+void sig_handler(int signal){
+	//Set up signal handlers for SIGINT/SIGTERM using sigaction() at the top of the main function
+	//On signal, send a LOGOUT message to server before closing connections and cleaning up / exiting.
+	//Clean up all resources (threads, sockets, etc.)
+}
 
 int main(int argc, char *argv[]) {
     // setup sigactions (ill-advised to use signal for this project, use sigaction with default (0) flags instead)
 	struct sigaction s_act = {0}; //defaults 0
-	//s_act.sa_handler =
-	//TODO: check for more s_act initializations to use
+	s_act.sa_handler = sig_handler; //all purpose signal handler
 
-	//set initial settings
-	settings_t settings = { //struct settings will be modified if any args get processed
-	.server = NULL,
-	.quiet = false,
-	.socket_fd = -1,
-	.running = false,
-	.username = ""
-	}
+	//some initial settings set when args are processed
+	settings.socket_fd = -1;
 
 	// parse arguments may change settings struct fields
 	// function still does something when checked in if statement, so check err
@@ -219,23 +237,47 @@ int main(int argc, char *argv[]) {
     // get username, assigns settings.username within func
 	get_username();
 
-
 	//CLIENT TCP WORKFLOW - CONNECTING FROM CLIENT SIDE
-	//Step 1. create a socket, the file descriptor for the network comms
-	struct sockadder_in net4 = settings.server.sin_adder;
-	int socket_fd = socket(AF_INET, SOCK_STREAM, 0); //set up a socket (file descriptor) to connect to for later network communication
+	//Step 1. get address/create a socket, the file descriptor for the network comms
+
+	settings.socket_fd = socket(AF_INET, SOCK_STREAM, 0); //set up a socket (file descriptor) to connect to for later network communication
 	//IPv4, TCP = AF_INET, SOCK_STREAM, default protocol is 0
+	//SOCK_STREAM is stream based TCP
 	if (socket_fd == -1){
+		perror("Error: Socket failed");
 		return 1;
 	}
 
 	// 2. connect to server - need IP addy and the port (formatted)
-	connect(settings.socket_fd, settings.server, sizeof(settings.server));
-	//TODO: error check?
+	// addr - is a pointer to the address structure
+	const struct sockaddr *addr = &settings.server;
+	if(connect(settings.socket_fd, addr, sizeof(settings.server)) != 0){ //0 = success, -1 = fail
+		perror("Error: Connection failed");
+		//cleanup - close socket fd
+		close(settings.socket_fd);
+		return 1;
+	}
+	// Connected! The handle is now connected between host and server
 
     // 3. create and send login message
+	// send login message
+	message_t login_message = {0};
+	login_message.type = htonl(LOGIN); //must convert to network byte order!
+
+	//username of that message, take where the login_message is (addy), then the size
+	strncpy(login_message.username, &login_message, 31); //length - 1
+
+	//put message parts into format
+	if ( write( settings.socket_fd, &login_message, sizeof(login_message)) <= 0) {
+ 		perror("Encountered a write error, Login failed");
+		return 1;
+	}
 
     // 4. create and start receive messages thread
+
+	// threads allow us to use mult blocking calls at the same time
+
+
 
     // while some condition(s) are true
         // read a line from STDIN
@@ -245,4 +287,11 @@ int main(int argc, char *argv[]) {
     // wait for the thread / clean up
 
     // cleanup and return
+	settings.running = false; //flag is recognized to be off, so everything should actually stop running
+	//send signal for logout
+
+	//close from when you connected in step 2
+	close(settings.socket_fd);
+
+	return 0; //success
 }
