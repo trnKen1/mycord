@@ -148,7 +148,7 @@ int process_args(int argc, char *argv[]) {
         	}
     		// Assign to settings server field
     		settings.server.sin_addr = *ipaddr;
-		} 
+		}
 		else {
 			fprintf(stderr, "Error: Domain is not in IPv4 family\n");
 			return 1;
@@ -191,16 +191,18 @@ ssize_t perform_full_read(void *buf, size_t n) {
 	size_t count = 0; //count how much read so far
 
 	// read up to n with current count so far, count tracks progress
-	while(count < n){
+	while(count < n){ 
 		//ssize_t read() returns num of bytes read, non neg integer
-		//bc read returns how many bytes are read so far, add it to count
-		count += read(settings.socket_fd, buf + count, n - count); //subtract count from n to remove already ready byte count
-		//count will keep adding up
-
-		//hit EOF
-		if(count <= 0){
-			return count;
+		//bc read returns how many bytes are read so far
+		
+		ssize_t read_result = read(settings.socket_fd, buf + count, n - count); //subtract count from n to remove already ready byte count
+		//keep track of how much read is ACTUALLY reading
+		//whatever is in the buffer + count(ed) so far, up to the num bytes in
+		//the message package
+		if(read_result <= 0){ //error
+			return read_result;
 		}
+		count += read_result;
 	}
 	return count;
 }
@@ -233,6 +235,8 @@ void* receive_messages_thread(void* arg) {
 
 			char time_buffer[32];//buffer for the timestamp (to be formatted)
 			char mention[32];//mentioned char array
+			//format time in messaging
+			strftime(time_buffer, 32, "%Y-%m-%d %H:%M:%S", raw_time_info);
 			sprintf(mention, "@%s", settings.username); //print mention string into mention buffer
 
 			//highlighting feature
@@ -368,7 +372,7 @@ int main(int argc, char *argv[]) {
 		if(line[bytes_read - 1] == '\n'){ //newline handling - we want to remove it
 			line[bytes_read - 1] = '\0'; //replace with null term to end it
 			//when you REPLACE newline with the null terminator, increment back
-			//because you will include '\0' in message line, which is invalid 
+			//because you will include '\0' in message line, which is invalid
 		}
 		//message length is 1024 bytes, check invalid lengths
 		if(bytes_read == 0 || bytes_read > 1023){ //cannot send empty message
@@ -381,6 +385,7 @@ int main(int argc, char *argv[]) {
 			//isprint() checks if character is printable
 			if(isprint(line[i]) == false){
 				valid_message = false;
+				break;
 			}
 		} //for loop bracket
 
@@ -393,16 +398,16 @@ int main(int argc, char *argv[]) {
 			write(settings.socket_fd, &msg, sizeof(msg)); //write back to socket
 		}
 		else{ //if we checked invalid length, then the content itself must be unreadable
-			fprintf(stderr, "Error: Invalid message may contain invalid characters");
+			fprintf(stderr, "Error: Invalid message may contain invalid characters\n");
 		}
 
 	} //while loop bracket
 
     // cleanup and return
-	
+
 	//send signal for logout before stop running, proper closing
 	sig_handler(0); //LOGOUT signal
-	
+
 	//stop everything
 	settings.running = false; //flag is recognized to be off, so everything should actually stop running
 	//close from when you connected in step 2
