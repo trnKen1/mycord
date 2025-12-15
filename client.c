@@ -74,7 +74,7 @@ int process_args(int argc, char *argv[]) {
 
 	// ERROR CHECKING
 	if(argv == NULL || argc == 0){
-		return -1;
+		return 1;
 	}
 
 	//arg indexing, find each argument in argv
@@ -232,7 +232,7 @@ void* receive_messages_thread(void* arg) {
 				//printf(); //formatted
 				printf("[%s] %s: %s\n", time_buffer, message.username, message.message_str);
 			}
-		}
+		} //end of MESSAGE_RECV bracket
 
 			// for system types, print the message in gray with username SYSTEM
 		else if(message_type == SYSTEM){
@@ -260,8 +260,8 @@ void sig_handler(int signal){
 
 int main(int argc, char *argv[]) {
     // setup sigactions (ill-advised to use signal for this project, use sigaction with default (0) flags instead)
-	struct sigaction s_act = {0}; //defaults 0
-	s_act.sa_handler = sig_handler; //all purpose signal handler
+	//struct sigaction s_act = {0}; //defaults 0
+	//s_act.sa_handler = sig_handler; //all purpose signal handler
 
 	//some initial settings set when args are processed
 	settings.socket_fd = -1;
@@ -320,7 +320,7 @@ int main(int argc, char *argv[]) {
 	char* line = NULL; //each line is going to be read
 	size_t len = 0;//length of line
     // while some condition(s) are true
-	while(settings.running){
+	while(settings.running == true){
         // read a line from STDIN
 		ssize_t bytes_read = getline(&line, &len, stdin); //returns num of chars read, translates to bytes
         // do some error checking (handle EOF, EINTR, etc.)
@@ -328,25 +328,49 @@ int main(int argc, char *argv[]) {
 			//stop loop
 			break;
 		}
+		if(line[bytes_read - 1] == '\n'){ //newline handling - we want to remove it
+			line[bytes_read - 1] = '\0'; //replace with null term to end it
+		}
+		//message length is 1024 bytes, check invalid lengths
+		if(bytes_read == 0 || bytes_read > 1023){ //cannot send empty message
+			fprintf(stderr, "Error: Invalid message length, cannot be 0 or longer than 1024 characters");
+			continue; //shouldn't break the whole thing, continue and try a valid message len next time
+		}
 
-
-        // send message to the server
 		bool valid_message = true; //check valid message before sending
-		for(int i = 0; i < lines_read; i++){
+		for(int i = 0; i < bytes_read; i++){
 			//isprint() checks if character is printable
 			if(isprint(line[i]) == false){
 				valid_message = false;
 			}
+		} //for loop bracket
+
+		//send message to server
+		if(valid_message == true){
+			//create new message struct
+			message_t msg = {0};
+			msg.message_type = htonl(MESSAGE_SEND); // format and specify message type
+			strncpy(msg.message_str, line, 1023); //copy contents to message struct's format field
+			write(settings.socket_fd, &msg, sizeof(msg)); //write back to socket
 		}
-	}
-    // wait for the thread / clean up
+		else{ //if we checked invalid length, then the content itself must be unreadable
+			fprintf(stderr, "Error: Invalid message may contain invalid characters");
+		}
+
+	} //while loop bracket
 
     // cleanup and return
 	settings.running = false; //flag is recognized to be off, so everything should actually stop running
+
 	//send signal for logout
+	//sig_handler(0); //LOGOUT signal
 
 	//close from when you connected in step 2
 	close(settings.socket_fd);
+	settings.socket_fd = -1;
+
+	pthread_join(thread_id, NULL); //wait for thread
+	free(line);
 
 	return 0; //success
 }
