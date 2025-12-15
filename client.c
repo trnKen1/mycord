@@ -256,12 +256,20 @@ void sig_handler(int signal){
 	//Set up signal handlers for SIGINT/SIGTERM using sigaction() at the top of the main function
 	//On signal, send a LOGOUT message to server before closing connections and cleaning up / exiting.
 	//Clean up all resources (threads, sockets, etc.)
+	if(settings.running){
+		//send logout
+		message_t message = {0};
+		message.message_type = htonl(LOGOUT);
+		write(settings.socket_fd, &message, sizeof(message));
+	}
 }
 
 int main(int argc, char *argv[]) {
     // setup sigactions (ill-advised to use signal for this project, use sigaction with default (0) flags instead)
-	//struct sigaction s_act = {0}; //defaults 0
-	//s_act.sa_handler = sig_handler; //all purpose signal handler
+	struct sigaction s_act = {0}; //defaults 0
+	s_act.sa_handler = sig_handler; //all purpose signal handler
+	sigaction(SIGINT, &s_act, NULL);
+	sigaction(SIGTERM, &s_act, NULL);
 
 	//some initial settings set when args are processed
 	settings.socket_fd = -1;
@@ -345,7 +353,7 @@ int main(int argc, char *argv[]) {
 			}
 		} //for loop bracket
 
-		//send message to server
+		// SEND message to server
 		if(valid_message == true){
 			//create new message struct
 			message_t msg = {0};
@@ -363,7 +371,7 @@ int main(int argc, char *argv[]) {
 	settings.running = false; //flag is recognized to be off, so everything should actually stop running
 
 	//send signal for logout
-	//sig_handler(0); //LOGOUT signal
+	sig_handler(0); //LOGOUT signal
 
 	//close from when you connected in step 2
 	close(settings.socket_fd);
