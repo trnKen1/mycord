@@ -371,6 +371,7 @@ int main(int argc, char *argv[]) {
 		}
 		if(line[bytes_read - 1] == '\n'){ //newline handling - we want to remove it
 			line[bytes_read - 1] = '\0'; //replace with null term to end it
+			bytes_read = bytes_read - 1;
 			//when you REPLACE newline with the null terminator, increment back
 			//because you will include '\0' in message line, which is invalid
 		}
