@@ -78,7 +78,7 @@ int process_args(int argc, char *argv[]) {
 	}
 
 	//arg indexing, find each argument in argv
-	for(int i = 0; i < argc; i++){
+	for(int i = 1; i < argc; i++){
 		char *arg = argv[i]; //current arg
 
 		// use str functions to parse strings
@@ -111,7 +111,6 @@ int process_args(int argc, char *argv[]) {
 			}
 			//use ip address argument if no error passed
 			ip_address = argv[++i];
-			domain_name = NULL; //ip specified, domain isn't & "switched off"
 		}
 		else if( strcmp(arg,"--domain") == 0){
 			if (i + 1 >= argc || argv[i+1][0] == '-') {
@@ -131,6 +130,37 @@ int process_args(int argc, char *argv[]) {
 			return 1;
 		}
 	}//for loop bracket
+
+	//DNS
+	if(domain_name != NULL){
+		struct hostent* host_info = gethostbyname(domain_name);
+        if (host_info == NULL) {
+            fprintf(stderr, "Error: Failed to resolve domain\n");
+            return 1;
+        }
+		// Check for IPv4 addresses
+    	if (host_info->h_addrtype == AF_INET) {
+        	// Get the first address from the list
+    		struct in_addr* ipaddr = (struct in_addr*)host_info->h_addr_list[0];
+			if (ipaddr == NULL) {
+        		fprintf(stderr, "Error: No addresses found for domain\n");
+            	return 1;
+        	}
+    		// Assign to settings server field
+    		settings.server.sin_addr = *ipaddr;
+		} 
+		else {
+			fprintf(stderr, "Error: Domain is not in IPv4 family\n");
+			return 1;
+		}
+	}
+	else { //convert IP string ip_address
+		if (inet_pton(AF_INET, ip_address, &settings.server.sin_addr) <= 0) {
+            fprintf(stderr, "Error: Invalid IP address\n");
+            return 1;
+        }
+	}
+	return 0;
 }
 
 int get_username() {
