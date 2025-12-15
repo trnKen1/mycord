@@ -294,9 +294,8 @@ int main(int argc, char *argv[]) {
 	}
 
 	// 2. connect to server - need IP addy and the port (formatted)
-	// addr - is a pointer to the address structure
-	const struct sockaddr *addr = &settings.server;
-	if(connect(settings.socket_fd, addr, sizeof(settings.server)) != 0){ //0 = success, -1 = fail
+	// cast &settings.server as a pointer to the address structure
+	if(connect(settings.socket_fd, (const struct sockaddr*)&settings.server, sizeof(settings.server)) != 0){ //0 = success, -1 = fail
 		perror("Error: Connection failed");
 		//cleanup - close socket fd
 		close(settings.socket_fd);
