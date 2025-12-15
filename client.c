@@ -77,9 +77,9 @@ int process_args(int argc, char *argv[]) {
 		return -1;
 	}
 
-	//a for arg indexing, find each argument in argv
-	for(int a = 0; a < argc; a++){
-		char *arg = argv[a]; //current arg
+	//arg indexing, find each argument in argv
+	for(int i = 0; i < argc; i++){
+		char *arg = argv[i]; //current arg
 
 		// use str functions to parse strings
 		if(strcmp(arg, "--help") == 0){ //strmp returns 0 on match
@@ -90,13 +90,13 @@ int process_args(int argc, char *argv[]) {
                 fprintf(stderr, "Error: --port flag requires an argument.\n");
                 return 1; //error
 			}//must past error to get to valid assignment
-			port_num = atoi(argv[++a]); //convert to int for range checking
+			port_num = atoi(argv[++i]); //convert to int for range checking
 			if (port_num <= 0 || port_num > 65535) { //invalid port range
 				fprintf(stderr, "Error: Invalid port number %d. Must be between 1 and 65535.\n", port_num);
 				return 1;
 			}
 				settings.server.sin_port = htons(port_num);
-				//prefix ++a takes incremented arg a, assigns, then next iter will check for --flags if valid
+				//prefix ++i takes incremented arg a, assigns, then next iter will check for --flags if valid
 				//atoi() converts text from args into int to store into port num
 				//htons() then converts that atoi int to network format
 		}
@@ -110,7 +110,7 @@ int process_args(int argc, char *argv[]) {
                 return 1;
 			}
 			//use ip address argument if no error passed
-			ip_address = argv[++a];
+			ip_address = argv[++i];
 			domain_name = NULL; //ip specified, domain isn't & "switched off"
 		}
 		else if( strcmp(arg,"--domain") == 0){
@@ -118,7 +118,7 @@ int process_args(int argc, char *argv[]) {
                 fprintf(stderr, "Error: --domain flag requires an argument.\n");
                 return 1;
             }
-			domain_name = argv[++a]; //pointer to first char
+			domain_name = argv[++i]; //pointer to first char
 			domain_used = true; //since domain is specified, we will lookup ip address for it
 			ip_address = NULL; // "switch" ip_address off
 		}
@@ -190,7 +190,7 @@ void* receive_messages_thread(void* arg) {
 			break;//not running
 		}
 
-		unsigned int message_type = ntohl(message.type); //get message type, formatted
+		unsigned int message_type = ntohl(message.message_type); //get message type, formatted
 		unsigned int message_time = ntohl(message.timestamp);
 
 		// check the message type
@@ -260,7 +260,7 @@ void sig_handler(int signal){
 
 int main(int argc, char *argv[]) {
     // setup sigactions (ill-advised to use signal for this project, use sigaction with default (0) flags instead)
-	struct sigaction s_act; //defaults 0
+	struct sigaction s_act = {0}; //defaults 0
 	s_act.sa_handler = sig_handler; //all purpose signal handler
 
 	//some initial settings set when args are processed
