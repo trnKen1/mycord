@@ -367,6 +367,8 @@ int main(int argc, char *argv[]) {
 		}
 		if(line[bytes_read - 1] == '\n'){ //newline handling - we want to remove it
 			line[bytes_read - 1] = '\0'; //replace with null term to end it
+			//when you REPLACE newline with the null terminator, increment back
+			//because you will include '\0' in message line, which is invalid 
 		}
 		//message length is 1024 bytes, check invalid lengths
 		if(bytes_read == 0 || bytes_read > 1023){ //cannot send empty message
@@ -397,15 +399,15 @@ int main(int argc, char *argv[]) {
 	} //while loop bracket
 
     // cleanup and return
-	settings.running = false; //flag is recognized to be off, so everything should actually stop running
-
-	//send signal for logout
+	
+	//send signal for logout before stop running, proper closing
 	sig_handler(0); //LOGOUT signal
-
+	
+	//stop everything
+	settings.running = false; //flag is recognized to be off, so everything should actually stop running
 	//close from when you connected in step 2
 	close(settings.socket_fd);
-	settings.socket_fd = -1;
-
+	settings.socket_fd = -1; //after close, cleanup
 	pthread_join(thread_id, NULL); //wait for thread
 	free(line);
 
