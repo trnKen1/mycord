@@ -182,6 +182,13 @@ void* receive_messages_thread(void* arg) {
 	while(settings.running == true){
 		// read message from the server (ensure no short reads)
 		//use perform_full_read(), which uses read() unbuffered, but ensures no cutoffs
+		if(perform_full_read(&message, sizeof(message)) <= 0){
+			if(settings.running == true){
+				fprintf(stderr, "Error: Server closed");
+				exit(1);
+			}
+			break;//not running
+		}
 
 		unsigned int message_type = ntohl(message.type); //get message type, formatted
 		unsigned int message_time = ntohl(message.timestamp);
@@ -189,29 +196,59 @@ void* receive_messages_thread(void* arg) {
 		// check the message type
 			// for message types, print the message and do highlight parsing (if not quiet)
         if(message_type == MESSAGE_RECV){
-			//print message: timestamp, username, content
+			//print message: timestamp, username, content FORMAT
+			time_t time = message_time;
+			//get local time with <time.h>
+			struct tm* raw_time_info = localtime(&time); //convert time_t to the tm struct in local time zone
+
+			char time_buffer[32];//buffer for the timestamp (to be formatted)
+			char mention[32];//mentioned char array
+			sprintf(mention, "@%s", settings.username); //print mention string into mention buffer
 
 			//highlighting feature
-			if(settings.quiet == false){ //if !quiet and the mention @abc1234 shows
+			if(settings.quiet == false && strstr(message.message_str, mention)){ //if !quiet and the mention @abc1234 shows
+				//strstr - first occurence of string
+				printf("[%s] %s: ", time_buffer, message.username);
 
+				//highlight word loop
+				char* current = message.message_str;
+				char* highlighted_word = strstr(current, mention); //where the first occurence of mention would be
+				while(highlighted_word != NULL){
+					// highlight-current gets us to focus on the mention part
+					//1 = size of char
+					//current = start of raw message
+					fwrite(current, 1, highlighted_word - current, stdout);
+					printf("\a%s%s%s", COLOR_RED, mention, COLOR_RESET); //highlight here
+
+					current = highlighted_word + strlen(mention);
+
+					//change 'index' value
+					highlighted_word = strstr(current, mention);
+				}
+				printf("%s\n", current);
 
 			}
 			else{ //should only print that one copy, no repeat messages
 				//printf(); //formatted
+				printf("[%s] %s: %s\n", time_buffer, message.username, message.message_str);
 			}
+		}
 
-
-        }
 			// for system types, print the message in gray with username SYSTEM
 		else if(message_type == SYSTEM){
-
+			printf("%s[SYSTEM] %s%s\n", COLOR_GRAY, message.message_str, COLOR_RESET);
         }
 			// for disconnect types, print the reason in red with username DISCONNECT and exit
 		else if(message_type == DISCONNECT) {
-
+			printf("%s[DISCONNECT] %s%s\n", COLOR_RED, message.message_str, COLOR_RESET);
+			exit(0);
         }
 			// for anything else, print an error
+		else {
+			fprintf(stderr, "Message receive fail");
+		}
 	}
+
 	return NULL;
 }
 
@@ -223,7 +260,7 @@ void sig_handler(int signal){
 
 int main(int argc, char *argv[]) {
     // setup sigactions (ill-advised to use signal for this project, use sigaction with default (0) flags instead)
-	struct sigaction s_act = {0}; //defaults 0
+	struct sigaction s_act; //defaults 0
 	s_act.sa_handler = sig_handler; //all purpose signal handler
 
 	//some initial settings set when args are processed
@@ -243,7 +280,7 @@ int main(int argc, char *argv[]) {
 	settings.socket_fd = socket(AF_INET, SOCK_STREAM, 0); //set up a socket (file descriptor) to connect to for later network communication
 	//IPv4, TCP = AF_INET, SOCK_STREAM, default protocol is 0
 	//SOCK_STREAM is stream based TCP
-	if (socket_fd == -1){
+	if (settings.socket_fd == -1){
 		perror("Error: Socket failed");
 		return 1;
 	}
@@ -262,28 +299,46 @@ int main(int argc, char *argv[]) {
     // 3. create and send login message
 	// send login message
 	message_t login_message = {0};
-	login_message.type = htonl(LOGIN); //must convert to network byte order!
+	login_message.message_type = htonl(LOGIN); //must convert to network byte order!
 
 	//username of that message, take where the login_message is (addy), then the size
 	strncpy(login_message.username, &login_message, 31); //length - 1
 
 	//put message parts into format
 	if ( write( settings.socket_fd, &login_message, sizeof(login_message)) <= 0) {
- 		perror("Encountered a write error, Login failed");
+ 		perror("Error: Encountered a write error, Login failed");
 		return 1;
 	}
 
     // 4. create and start receive messages thread
-
 	// threads allow us to use mult blocking calls at the same time
+	settings.running = true;
 
+	pthread_t thread_id;
+	pthread_create(&thread_id, NULL, receive_messages_thread, NULL); //0 if success
 
-
+	char* line = NULL; //each line is going to be read
+	size_t len = 0;//length of line
     // while some condition(s) are true
+	while(settings.running){
         // read a line from STDIN
+		ssize_t bytes_read = getline(&line, &len, stdin); //returns num of chars read, translates to bytes
         // do some error checking (handle EOF, EINTR, etc.)
-        // send message to the server
+		if(bytes_read == -1){ //EOF
+			//stop loop
+			break;
+		}
 
+
+        // send message to the server
+		bool valid_message = true; //check valid message before sending
+		for(int i = 0; i < lines_read; i++){
+			//isprint() checks if character is printable
+			if(isprint(line[i]) == false){
+				valid_message = false;
+			}
+		}
+	}
     // wait for the thread / clean up
 
     // cleanup and return
