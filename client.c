@@ -29,8 +29,8 @@ typedef struct __attribute__((packed)) Message {
 	//message_type will ideally take from message_type_t
 	unsigned int message_type; //unsigned int, first 4 bytes, the int represents many msg types, defined in enums
 	unsigned int timestamp; //u int UNIX timestamp, next 4 bytes
-	char* username[32]; //next 32 bytes, null terminated string, ex: @kxt5405 with '\0'
-	char* message_str[1024]; //next 1024 bytes is a null term msg
+	char username[32]; //next 32 bytes, null terminated string, ex: @kxt5405 with '\0'
+	char message_str[1024]; //next 1024 bytes is a null term msg
 } message_t;
 
 
@@ -145,7 +145,7 @@ int get_username() {
 	char buffer[256];//last byte includes null terminator
 	//char *fgets(char *str, int n, FILE *stream);
 	if(fgets(buffer, sizeof(buffer), fp) != NULL){ //also get size of buffer, but since it's char, usually 1 byte
-		size_t len = strcspn(buffer, '\n'); //define a length before the newline that we don't want to indclude, strcspn finds first position of target character
+		size_t len = strcspn(buffer, "\n"); //define a length before the newline that we don't want to indclude, strcspn finds first position of target character
 		buffer[len] = '\0';
 		strncpy(settings.username, buffer, sizeof(settings.username) - 1); //strncpy safer alternative to strcpy, sizeof would be 31
 		settings.username[sizeof(settings.username)] = '\0'; //make sure you null terminate last char in case it gets overwritten with any other value
@@ -309,8 +309,8 @@ int main(int argc, char *argv[]) {
 	message_t login_message = {0};
 	login_message.message_type = htonl(LOGIN); //must convert to network byte order!
 
-	//username of that message, take where the login_message is (addy), then the size
-	strncpy(login_message.username, &login_message, 31); //length - 1
+	//username of that message, take settings username to the login message
+	strncpy(login_message.username, settings.username, 31); //length - 1
 
 	//put message parts into format
 	if ( write( settings.socket_fd, &login_message, sizeof(login_message)) <= 0) {
