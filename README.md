@@ -1,56 +1,8 @@
-# mycord Final Programming Assignment
+# mycord Project
 
-In this assignment, you are going to implement your own client for the `mycord` chat service. You will utilize many aspects of typing, dynamic memory, IO, signals, networking, and mulithreading in C and Linux/Unix. You'll get experience implementing a protocol using sockets on TCP IPv4, with associated error handling and argument parsing.
+This project implements a client for the `mycord` service called `client`
 
-## Accepting the Assignment
-
-[Click here to accept this assignment](https://classroom.github.com/a/aWwilwLR). Once you accept the invitation, GitHub will create a private repository containing the starter files for the assignment. You will also find an accompanying `README.md`, which is essentially this document you are reading, useful for instructions and further details.
-
-## Submission Details
-
-This assignment has **three parts** graded out of 15 points.
-- Part 1 is worth 12.5 points (implementing mycord)
-- Part 2 is worth 2.5 points (implementing / improving mycord with GenAI and report)
-- Part 3 is worth 5 points (implementing additional features with Gen AI)
-
-Notice the total possible points are 20. Anything over 15 points will be treated as extra credit toward your entire grade. (That is to say, if you do all three parts you will get 5% bonus grade credit (almost half a letter grade!))
-
-## Submission Rules
-
-You must work on and submit Part 1 first before you begin Part 2 or 3. If you submit Part 2 or 3 on canvas before Part 1, your Part 1 score will be a zero. **You MUST commit and submit your version of mycord (Part 1) to Canvas first.** Repeated again:
-
-**YOU MUST IMPLEMENT MYCORD YOURSELF FIRST, COMMIT IT TO GITHUB, AND THEN SUBMIT TO CANVAS BEFORE YOU BEGIN PART 2.** 
-
-If your canvas submission for Part 2 or 3 is BEFORE the date of your Part 1 commit, Part 1 will not be graded!!
-
-You can find more details about Part 2 and 3 below.
-
-# Part 1: Mycord Implementation
-
-In part 1 of this assignment, you will implement by yourself (with no LLM help) the following application.
-
-## Details
-
-You will be implementing a client for the `mycord` service called `client` which has the following help menu:
-
-```
-$ ./client --help
-usage: ./client [-h] [--port PORT] [--ip IP] [--domain DOMAIN] [--quiet]
-
-mycord client
-
-options:
-  --help                show this help message and exit
-  --port PORT           port to connect to (default: 8080)
-  --ip IP               IP to connect to (default: "127.0.0.1")
-  --domain DOMAIN       Domain name to connect to (if domain is specified, IP must not be)
-  --quiet               do not perform alerts or mention highlighting
-
-examples:
-  ./client --help (prints the above message)
-  ./client --port 1738 (connects to a mycord server at 127.0.0.1:1738)
-  ./client --domain example.com (connects to a mycord server at example.com:8080)
-```
+mycord utilizes many aspects of typing, dynamic memory, IO, signals, networking, and mulithreading in C and Linux/Unix. Here I implemented a protocol using sockets on TCP IPv4, with associated error handling and argument parsing.
 
 ### Argument Details
 
@@ -189,25 +141,7 @@ Your `client` program should:
 8. **Error handling**: All errors should be printed to STDERR with the prefix `Error: `
    - Never receive a DISCONNECT due to invalid user input (validate before sending)
 
-### Implementation Details
-
-You may use any library or function you like to implement this assignment. That said, to guide your approach, the solution only uses these functions and syscalls:
-- Dynamic memory functions: `sizeof()`, `free()`
-- Socket functions: `socket()`, `connect()`, `read()`, `write()`, `close()`
-- Network functions: `inet_pton()`, `gethostbyname()`, `htons()`, `htonl()`, `ntohl()`
-- Threading: `pthread_create()`, `pthread_join()`
-- Signal handling: `sigaction()`, `raise()`
-- Time functions: `localtime()`, `strftime()`
-- String functions: `strcmp()`, `strcpy()`, `strlen()`, `strstr()`, `strchr()`, `strerror()`, `isprint()`, `sprintf()`
-- Process functions: `popen()`, `pclose()`
-- Input/Output: `getline()`, `fprintf()`, `printf()`, `fwrite()`, `feof()`
-- State: `exit()`
-
-Feel free to look at the man pages for any of these functions to inspect their function signature and use case.
-
-#### Recommended Implementation Approach
-
-If you are stuck where to begin, follow the below guide to build your implementation:
+#### Implementation Approach
 
 1. **Parse and verify CLI arguments**
    - Parse arguments into a structure to store connection settings (IP/domain, port, quiet flag)
@@ -266,7 +200,7 @@ If you are stuck where to begin, follow the below guide to build your implementa
     - Exit with appropriate return code
     - Feel free to test with Valgrind
 
-### Recommendations, hints, and tips
+### Helpful hints, tips, and notes
 
 - **Use pthreads**: The recommended approach is to use pthreads for handling concurrent message receiving and sending. This allows the client to receive messages from the server while simultaneously reading user input from STDIN. You can use forks and multiprocessing, but it is not recommended for the client.
 
@@ -291,10 +225,6 @@ If you are stuck where to begin, follow the below guide to build your implementa
 ## Assignment File Structure
 
 ### **client.c**
-
-**This is the only file you should be modifying in this assignment.**
-
-For all parts of this assignment, you will be writing your code in this single source file. To give you some guidance, the source file for Part 1 shouldn't be too much longer than 300 lines of code, with comments. 100 of that are "boilerplate" CLI parsing, struct definitions, name/username resolution.
 
 ### **server.py**
 
@@ -340,9 +270,9 @@ If your code has no syntax errors, an executable file called `client` will appea
 
 ### Testing / Running
 
-You can test your program yourself by connecting to a server. You have two options:
+You can test your program yourself by connecting to a server.
 
-1. **Test locally using the provided server:**
+**Test locally using the provided server:**
    ```shell
    # Terminal 1: Start the server
    python3 server.py
@@ -355,11 +285,6 @@ You can test your program yourself by connecting to a server. You have two optio
    ./client --domain e5-cse-135-08.cse.psu.edu --port 1234
    ```
 
-2. **Test on the classroom server:**
-   ```shell
-   ./client --domain mycord.devic.dev
-   ```
-
 You should test various scenarios:
 - Valid message sending
 - Invalid message handling (too long, empty, non-printable characters)
@@ -369,89 +294,3 @@ You should test various scenarios:
 - Message formatting and mention highlighting
 - System messages
 - Disconnect handling
-
----
-
-## Part 1 Rubric
-
-Your grade for part 1 will be broken down into the following categories
-- 2pts | Comment Quality
-- 1pts | Commits / Evidence of work
-- 1pts | Proper CLI handling / parsing / error messages
-- 0.5pts | Help Menu
-- 1 pts | Capable of LOGIN
-- 1 pts | Capable of MESSAGE_SEND
-- 1 pts | Proper error handling of MESSAGE_SEND (never receives a disconnect)
-- 1 pts | Capable of MESSAGE_RECV
-- 0.5 pts | Proper output formats
-- 0.5 pts | Proper output highlighting
-- 0.5 pts | Proper disconnect handling
-- 1 pts | EOF/SIGINT/SIGTERM handling
-- 0.5 pts | Sent a message to the classroom server
-- 1 pts | Never crashes
-- \-\-\-\-\-\-\-\-\-\-\-
-- 12.5 | Total
-
-
-
----
-
-# Part 2: AI Assistance
-
-In Part 2 of this assignment, you will use GenAI or an LLM of your choice (ChatGPT, Claude, Copilot, Gemini, DeepSeek, Llama, Grok, ...) to help you with:
-   - Code quality and cleanliness
-   - Performance optimizations
-   - Better error handling
-   - Code organization and structure
-   - Reimplement the assignment entirely
-
-Using it's suggestions, implement them on top of your Part 1 assignment and submit a commit ID on Canvas. You will then submit a 500 word document about your co-journey (in Canvas). Discuss how well the AI performed, and how fast you were able to complete the project. Did it work the first time? The second? What parts of the commit were from AI, was it useful? Did you understand what it was doing?
-
-## Part 2 Rubric
-
-Your grade for part 2 will be broken down into the following categories
-- 1pts | AI-assisted code/optimization work per the rubric from Part 1 (i.e. we will test your AIs code on part 1, a 12.5/12.5 = 1pts)
-- 1.5pts | 500 word report about your journey with AI (0.5pts poor report | 1pt average report | 1.5pts excellent report)
-- \-\-\-\-\-\-\-\-\-\-\-
-- 2.5 | Total
-
----
-
-# Part 3: TUI Interface (Extra Credit)
-
-After completing Part 1 or Part 2, add a `--tui` flag to your client that enables a Text User Interface (TUI) instead of the standard STDIN/STDOUT interface.
-
-Not sure what a TUI is? Think back to using GDB, VIM, or any other terminal based editor. If you want inspiration you can see what an LLM TUI looks like [here](https://www.youtube.com/watch?v=UAK6dQbnknE).
-
-Your extra credit task will be to, using an LLM, create a TUI for the mycord client with the following requirements:
-- Input should always be typed at the bottom of the screen
-- When messages arrive, the input field should not be split across two/multiple lines
-- The interface should be redrawn to accommodate new messages while keeping input at the bottom
-- Messages should scroll up as new ones arrive
-- The arrow keys should be used to scroll up and down the history of messages
-- TUI is built using ANSI sequences or builtin libraries only
-
-The implementation or style (colors, format, boxes, etc...) is entirely up to you and is a creative element. You will get the full 5% bonus if your TUI satisfies the above requirements. 
-
-## Part 3 Rubric
-
-Your grade for part 3 will be graded into one of the following categories:
-- 0 pts | TUI does not work / no commit / input lines are broken by output
-- 4 pts | TUI works (no broken input lines, scrolling works)
-- 5 pts | TUI is a masterclass, well thought out and easy to use / visually pleasing (colors, styles, etc...)
-
----
-
-# Turnin
-
-## Part 1 Submission
-
-Go to Canvas, start the quiz, and submit a commit ID as a single line in the submission box for Part 1.
-
-## Part 2 Submission
-
-After completing Part 2 (AI-assisted improvements), submit your updated commit ID to Canvas for Part 2 along with your report.
-
-## Part 3 Submission
-
-After completing Part 3 (TUI interface), submit your final commit ID to Canvas for Part 3.
